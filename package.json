@@ -21,7 +21,9 @@
       "src/**/*",
       "assets/**/*"
     ],
+    "icon": "assets/icon.png",
     "mac": {
+      "icon": "assets/icon.icns",
       "category": "public.app-category.video",
       "target": [
         {
