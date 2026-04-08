@@ -85,16 +85,73 @@
     .btn-success:hover:not(:disabled) { background: #1e7e34; }
 
     .btn-icon {
-      padding: 7px 10px;
-      font-size: 1rem;
-      line-height: 1;
+      padding: 6px 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
+
+    .btn-icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: #eee;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .btn-icon:hover:not(:disabled) svg { stroke: #e94560; }
 
     .separator {
       width: 1px;
       height: 24px;
       background: #0f3460;
       flex-shrink: 0;
+    }
+
+    /* Volume control */
+    .volume-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .volume-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 80px;
+      height: 4px;
+      background: #0f3460;
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .volume-slider:disabled { opacity: 0.3; cursor: default; }
+
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #e94560;
+      cursor: pointer;
+      border: none;
+    }
+
+    .volume-slider::-webkit-slider-thumb:hover {
+      background: #ff6b81;
+      transform: scale(1.15);
+    }
+
+    .volume-label {
+      font-size: 0.7rem;
+      color: #666;
+      min-width: 28px;
+      text-align: center;
     }
 
     /* Video */
@@ -125,14 +182,14 @@
 
     .placeholder p {
       font-size: 0.95rem;
-      margin-top: 12px;
+      margin-top: 16px;
     }
 
     .placeholder .shortcuts {
-      margin-top: 16px;
+      margin-top: 20px;
       font-size: 0.78rem;
       color: #333;
-      line-height: 1.8;
+      line-height: 2;
     }
 
     .placeholder kbd {
@@ -203,6 +260,7 @@
       .header { flex-direction: column; padding: 8px 12px; }
       .controls { justify-content: center; }
       select { max-width: 100%; flex: 1; min-width: 120px; }
+      .volume-slider { width: 60px; }
     }
 
     /* Fullscreen */
@@ -237,25 +295,81 @@
           </option>
         </select>
         <button class="btn-primary" @click="startPreview" :disabled="!selectedVideoDevice">
+          <!-- play icon -->
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none" style="vertical-align: -2px; margin-right: 4px;">
+            <polygon points="5,3 19,12 5,21"/>
+          </svg>
           Preview
         </button>
+
         <div class="separator"></div>
-        <button class="btn-icon" @click="toggleMute" :disabled="!stream"
-                :title="isMuted ? 'Unmute (M)' : 'Mute (M)'">
-          {{ isMuted ? '\uD83D\uDD07' : '\uD83D\uDD0A' }}
-        </button>
+
+        <!-- Volume: icon + slider + label -->
+        <div class="volume-group">
+          <button class="btn-icon" @click="toggleMute" :disabled="!stream"
+                  :title="isMuted ? 'Unmute (M)' : 'Mute (M)'">
+            <!-- volume icon: changes based on muted/level -->
+            <svg v-if="isMuted" viewBox="0 0 24 24">
+              <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" fill="currentColor" stroke="none"/>
+              <line x1="23" y1="9" x2="17" y2="15"/>
+              <line x1="17" y1="9" x2="23" y2="15"/>
+            </svg>
+            <svg v-else-if="volume < 0.5" viewBox="0 0 24 24">
+              <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" fill="currentColor" stroke="none"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+            <svg v-else viewBox="0 0 24 24">
+              <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" fill="currentColor" stroke="none"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+          </button>
+          <input type="range" class="volume-slider" min="0" max="1" step="0.01"
+                 v-model.number="volume" @input="onVolumeChange" :disabled="!stream"
+                 title="Volume">
+          <span class="volume-label">{{ Math.round(volume * 100) }}%</span>
+        </div>
+
+        <div class="separator"></div>
+
+        <!-- Screenshot -->
         <button class="btn-icon" @click="takeScreenshot" :disabled="!stream" title="Screenshot (F9)">
-          \uD83D\uDCF7
+          <svg viewBox="0 0 24 24">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
         </button>
+
+        <!-- Fullscreen -->
         <button class="btn-icon" @click="toggleFullscreen" title="Fullscreen (F11)">
-          {{ isFullscreen ? '\uD83D\uDD33' : '\u26F6' }}
+          <svg v-if="!isFullscreen" viewBox="0 0 24 24">
+            <polyline points="15 3 21 3 21 9"/>
+            <polyline points="9 21 3 21 3 15"/>
+            <line x1="21" y1="3" x2="14" y2="10"/>
+            <line x1="3" y1="21" x2="10" y2="14"/>
+          </svg>
+          <svg v-else viewBox="0 0 24 24">
+            <polyline points="4 14 10 14 10 20"/>
+            <polyline points="20 10 14 10 14 4"/>
+            <line x1="14" y1="10" x2="21" y2="3"/>
+            <line x1="3" y1="21" x2="10" y2="14"/>
+          </svg>
         </button>
+
         <div class="separator"></div>
+
+        <!-- Record -->
         <button v-if="!isRecording" class="btn-success" @click="startRecording" :disabled="!stream">
-          Record (F5)
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none" style="vertical-align: -2px; margin-right: 4px;">
+            <circle cx="12" cy="12" r="8"/>
+          </svg>
+          Record
         </button>
         <button v-else class="btn-danger" @click="stopRecording">
-          Stop (F5)
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none" style="vertical-align: -2px; margin-right: 4px;">
+            <rect x="4" y="4" width="16" height="16" rx="2"/>
+          </svg>
+          Stop
         </button>
       </div>
     </div>
@@ -264,17 +378,17 @@
       <video v-show="stream" ref="videoEl" autoplay playsinline></video>
       <canvas ref="canvasEl"></canvas>
       <div v-if="!stream" class="placeholder">
-        <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5">
+        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2" y="3" width="20" height="14" rx="2"/>
           <path d="M8 21h8"/>
           <path d="M12 17v4"/>
-          <circle cx="12" cy="10" r="3"/>
+          <polygon points="10,8 10,14 15,11" fill="#444" stroke="none"/>
         </svg>
         <p>Select your capture device and click Preview</p>
         <div class="shortcuts">
-          <kbd>F5</kbd> Record &nbsp;
-          <kbd>F9</kbd> Screenshot &nbsp;
-          <kbd>F11</kbd> Fullscreen &nbsp;
+          <kbd>F5</kbd> Record &nbsp;&nbsp;
+          <kbd>F9</kbd> Screenshot &nbsp;&nbsp;
+          <kbd>F11</kbd> Fullscreen &nbsp;&nbsp;
           <kbd>M</kbd> Mute
         </div>
       </div>
@@ -296,6 +410,7 @@
     const { createApp, ref, onMounted, onUnmounted } = Vue;
 
     const STORAGE_KEY = 'capmonster-devices';
+    const VOLUME_KEY = 'capmonster-volume';
 
     createApp({
       setup() {
@@ -309,6 +424,7 @@
         const isRecording = ref(false);
         const isFullscreen = ref(false);
         const isMuted = ref(false);
+        const volume = ref(parseFloat(localStorage.getItem(VOLUME_KEY)) || 1);
         const statusText = ref('Loading devices...');
         const recordingTime = ref('00:00');
         const toastVisible = ref(false);
@@ -318,6 +434,7 @@
         let recordedChunks = [];
         let timerInterval = null;
         let startTime = 0;
+        let volumeBeforeMute = 1;
 
         function showToast(msg) {
           toastMessage.value = msg;
@@ -346,6 +463,23 @@
               }
             }
           } catch {}
+        }
+
+        function applyVolume() {
+          if (videoEl.value) {
+            videoEl.value.volume = volume.value;
+            videoEl.value.muted = isMuted.value;
+          }
+        }
+
+        function onVolumeChange() {
+          if (volume.value > 0 && isMuted.value) {
+            isMuted.value = false;
+          } else if (volume.value === 0) {
+            isMuted.value = true;
+          }
+          applyVolume();
+          try { localStorage.setItem(VOLUME_KEY, volume.value); } catch {}
         }
 
         async function loadDevices() {
@@ -403,7 +537,10 @@
 
             const s = await navigator.mediaDevices.getUserMedia(constraints);
             stream.value = s;
-            if (videoEl.value) videoEl.value.srcObject = s;
+            if (videoEl.value) {
+              videoEl.value.srcObject = s;
+              applyVolume();
+            }
 
             const vTrack = s.getVideoTracks()[0];
             const settings = vTrack.getSettings();
@@ -416,10 +553,15 @@
         }
 
         function toggleMute() {
-          if (videoEl.value) {
-            isMuted.value = !isMuted.value;
-            videoEl.value.muted = isMuted.value;
+          if (!videoEl.value) return;
+          if (isMuted.value) {
+            isMuted.value = false;
+            volume.value = volumeBeforeMute || 0.5;
+          } else {
+            volumeBeforeMute = volume.value;
+            isMuted.value = true;
           }
+          applyVolume();
         }
 
         function toggleFullscreen() {
@@ -449,9 +591,7 @@
           const defaultName = `capmonster-${timestamp}.png`;
 
           const saved = await window.electronAPI.saveScreenshot(dataUrl, defaultName);
-          if (saved) {
-            showToast('Screenshot saved');
-          }
+          if (saved) showToast('Screenshot saved');
         }
 
         function startRecording() {
@@ -475,9 +615,7 @@
             const defaultName = `capmonster-${timestamp}.webm`;
 
             const saved = await window.electronAPI.saveRecording(arrayBuffer, defaultName);
-            if (saved) {
-              showToast('Recording saved');
-            }
+            if (saved) showToast('Recording saved');
             statusText.value = saved ? 'Recording saved' : 'Recording cancelled';
           };
 
@@ -541,10 +679,10 @@
         return {
           videoEl, canvasEl, videoDevices, audioDevices,
           selectedVideoDevice, selectedAudioDevice,
-          stream, isRecording, isFullscreen, isMuted,
+          stream, isRecording, isFullscreen, isMuted, volume,
           statusText, recordingTime, toastVisible, toastMessage,
           startPreview, startRecording, stopRecording,
-          toggleMute, toggleFullscreen, takeScreenshot,
+          toggleMute, toggleFullscreen, takeScreenshot, onVolumeChange,
         };
       },
     }).mount('#app');
