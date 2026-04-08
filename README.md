@@ -26,7 +26,7 @@ Perfect for streaming setups, Nintendo Switch capture, retro gaming, or any HDMI
 
 ## Install
 
-Download the latest release for your platform from the [Releases](https://github.com/josuemartinez/capmonster/releases) page:
+Download the latest release for your platform from the [Releases](https://github.com/jmartinezluxury/capmonster/releases) page:
 
 | Platform | Format |
 |----------|--------|
@@ -38,7 +38,7 @@ Download the latest release for your platform from the [Releases](https://github
 
 ```bash
 # Clone
-git clone https://github.com/josuemartinez/capmonster.git
+git clone https://github.com/jmartinezluxury/capmonster.git
 cd capmonster
 
 # Install dependencies
