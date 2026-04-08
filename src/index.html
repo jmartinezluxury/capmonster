@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CapMonster</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: #16213e;
+      border-bottom: 1px solid #0f3460;
+      flex-shrink: 0;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .brand svg { flex-shrink: 0; }
+
+    .brand h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #e94560;
+      letter-spacing: -0.5px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    select, button {
+      padding: 7px 12px;
+      border-radius: 6px;
+      border: 1px solid #0f3460;
+      background: #16213e;
+      color: #eee;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    select:hover, button:hover { border-color: #e94560; }
+    select:disabled, button:disabled { opacity: 0.4; cursor: default; }
+
+    select { max-width: 200px; }
+
+    .btn-primary { background: #e94560; border-color: #e94560; font-weight: 600; }
+    .btn-primary:hover:not(:disabled) { background: #c73652; }
+
+    .btn-danger { background: #dc3545; border-color: #dc3545; font-weight: 600; }
+    .btn-danger:hover:not(:disabled) { background: #b02a37; }
+
+    .btn-success { background: #28a745; border-color: #28a745; font-weight: 600; }
+    .btn-success:hover:not(:disabled) { background: #1e7e34; }
+
+    .btn-icon {
+      padding: 7px 10px;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .separator {
+      width: 1px;
+      height: 24px;
+      background: #0f3460;
+      flex-shrink: 0;
+    }
+
+    /* Video */
+    .video-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      min-height: 0;
+      background: #000;
+    }
+
+    video, canvas {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 4px;
+      background: #000;
+      object-fit: contain;
+    }
+
+    canvas { display: none; }
+
+    .placeholder {
+      text-align: center;
+      color: #444;
+    }
+
+    .placeholder p {
+      font-size: 0.95rem;
+      margin-top: 12px;
+    }
+
+    .placeholder .shortcuts {
+      margin-top: 16px;
+      font-size: 0.78rem;
+      color: #333;
+      line-height: 1.8;
+    }
+
+    .placeholder kbd {
+      background: #222;
+      border: 1px solid #333;
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-family: inherit;
+      font-size: 0.75rem;
+    }
+
+    /* Status bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 16px;
+      background: #16213e;
+      border-top: 1px solid #0f3460;
+      font-size: 0.78rem;
+      color: #666;
+      flex-shrink: 0;
+    }
+
+    .recording-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #e94560;
+      font-weight: 600;
+    }
+
+    .recording-dot {
+      width: 8px;
+      height: 8px;
+      background: #e94560;
+      border-radius: 50%;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #28a745;
+      color: #fff;
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .toast.show { opacity: 1; }
+
+    /* Responsive */
+    @media (max-width: 750px) {
+      .header { flex-direction: column; padding: 8px 12px; }
+      .controls { justify-content: center; }
+      select { max-width: 100%; flex: 1; min-width: 120px; }
+    }
+
+    /* Fullscreen */
+    body.fullscreen .header,
+    body.fullscreen .status-bar { display: none; }
+    body.fullscreen .video-container { padding: 0; border-radius: 0; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="header">
+      <div class="brand">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e94560" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <path d="M8 21h8"/>
+          <path d="M12 17v4"/>
+          <circle cx="12" cy="10" r="2" fill="#e94560" stroke="none"/>
+        </svg>
+        <h1>CapMonster</h1>
+      </div>
+      <div class="controls">
+        <select v-model="selectedVideoDevice" @change="startPreview">
+          <option value="">-- Video --</option>
+          <option v-for="d in videoDevices" :key="d.deviceId" :value="d.deviceId">
+            {{ d.label || 'Device ' + d.deviceId.slice(0, 8) }}
+          </option>
+        </select>
+        <select v-model="selectedAudioDevice" @change="startPreview">
+          <option value="">-- Audio --</option>
+          <option v-for="d in audioDevices" :key="d.deviceId" :value="d.deviceId">
+            {{ d.label || 'Audio ' + d.deviceId.slice(0, 8) }}
+          </option>
+        </select>
+        <button class="btn-primary" @click="startPreview" :disabled="!selectedVideoDevice">
+          Preview
+        </button>
+        <div class="separator"></div>
+        <button class="btn-icon" @click="toggleMute" :disabled="!stream"
+                :title="isMuted ? 'Unmute (M)' : 'Mute (M)'">
+          {{ isMuted ? '\uD83D\uDD07' : '\uD83D\uDD0A' }}
+        </button>
+        <button class="btn-icon" @click="takeScreenshot" :disabled="!stream" title="Screenshot (F9)">
+          \uD83D\uDCF7
+        </button>
+        <button class="btn-icon" @click="toggleFullscreen" title="Fullscreen (F11)">
+          {{ isFullscreen ? '\uD83D\uDD33' : '\u26F6' }}
+        </button>
+        <div class="separator"></div>
+        <button v-if="!isRecording" class="btn-success" @click="startRecording" :disabled="!stream">
+          Record (F5)
+        </button>
+        <button v-else class="btn-danger" @click="stopRecording">
+          Stop (F5)
+        </button>
+      </div>
+    </div>
+
+    <div class="video-container" @dblclick="toggleFullscreen">
+      <video v-show="stream" ref="videoEl" autoplay playsinline></video>
+      <canvas ref="canvasEl"></canvas>
+      <div v-if="!stream" class="placeholder">
+        <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <path d="M8 21h8"/>
+          <path d="M12 17v4"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+        <p>Select your capture device and click Preview</p>
+        <div class="shortcuts">
+          <kbd>F5</kbd> Record &nbsp;
+          <kbd>F9</kbd> Screenshot &nbsp;
+          <kbd>F11</kbd> Fullscreen &nbsp;
+          <kbd>M</kbd> Mute
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <span>{{ statusText }}</span>
+      <div v-if="isRecording" class="recording-indicator">
+        <span class="recording-dot"></span>
+        <span>REC {{ recordingTime }}</span>
+      </div>
+    </div>
+
+    <div class="toast" :class="{ show: toastVisible }">{{ toastMessage }}</div>
+  </div>
+
+  <script src="../node_modules/vue/dist/vue.global.prod.js"></script>
+  <script>
+    const { createApp, ref, onMounted, onUnmounted } = Vue;
+
+    const STORAGE_KEY = 'capmonster-devices';
+
+    createApp({
+      setup() {
+        const videoEl = ref(null);
+        const canvasEl = ref(null);
+        const videoDevices = ref([]);
+        const audioDevices = ref([]);
+        const selectedVideoDevice = ref('');
+        const selectedAudioDevice = ref('');
+        const stream = ref(null);
+        const isRecording = ref(false);
+        const isFullscreen = ref(false);
+        const isMuted = ref(false);
+        const statusText = ref('Loading devices...');
+        const recordingTime = ref('00:00');
+        const toastVisible = ref(false);
+        const toastMessage = ref('');
+
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let timerInterval = null;
+        let startTime = 0;
+
+        function showToast(msg) {
+          toastMessage.value = msg;
+          toastVisible.value = true;
+          setTimeout(() => { toastVisible.value = false; }, 2500);
+        }
+
+        function saveDevicePrefs() {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+              video: selectedVideoDevice.value,
+              audio: selectedAudioDevice.value,
+            }));
+          } catch {}
+        }
+
+        function loadDevicePrefs() {
+          try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            if (saved) {
+              if (saved.video && videoDevices.value.some(d => d.deviceId === saved.video)) {
+                selectedVideoDevice.value = saved.video;
+              }
+              if (saved.audio && audioDevices.value.some(d => d.deviceId === saved.audio)) {
+                selectedAudioDevice.value = saved.audio;
+              }
+            }
+          } catch {}
+        }
+
+        async function loadDevices() {
+          try {
+            const tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            tempStream.getTracks().forEach(t => t.stop());
+
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            videoDevices.value = devices.filter(d => d.kind === 'videoinput');
+            audioDevices.value = devices.filter(d => d.kind === 'audioinput');
+            statusText.value = `${videoDevices.value.length} video, ${audioDevices.value.length} audio devices found`;
+
+            loadDevicePrefs();
+
+            if (!selectedVideoDevice.value) {
+              const card = videoDevices.value.find(d =>
+                /capture|captur|game|elgato|avermedia|hdmi|usb.*video/i.test(d.label)
+              );
+              if (card) selectedVideoDevice.value = card.deviceId;
+            }
+
+            if (selectedVideoDevice.value) startPreview();
+          } catch (err) {
+            statusText.value = 'Error accessing devices: ' + err.message;
+          }
+        }
+
+        async function startPreview() {
+          if (stream.value) {
+            stream.value.getTracks().forEach(t => t.stop());
+            stream.value = null;
+          }
+
+          if (!selectedVideoDevice.value) return;
+
+          try {
+            const constraints = {
+              video: {
+                deviceId: { exact: selectedVideoDevice.value },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                frameRate: { ideal: 60 },
+              },
+              audio: selectedAudioDevice.value
+                ? {
+                    deviceId: { exact: selectedAudioDevice.value },
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false,
+                    latency: 0,
+                    channelCount: 2,
+                  }
+                : false,
+            };
+
+            const s = await navigator.mediaDevices.getUserMedia(constraints);
+            stream.value = s;
+            if (videoEl.value) videoEl.value.srcObject = s;
+
+            const vTrack = s.getVideoTracks()[0];
+            const settings = vTrack.getSettings();
+            statusText.value = `${settings.width}x${settings.height} @ ${settings.frameRate || '?'}fps`;
+
+            saveDevicePrefs();
+          } catch (err) {
+            statusText.value = 'Error: ' + err.message;
+          }
+        }
+
+        function toggleMute() {
+          if (videoEl.value) {
+            isMuted.value = !isMuted.value;
+            videoEl.value.muted = isMuted.value;
+          }
+        }
+
+        function toggleFullscreen() {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+            isFullscreen.value = true;
+            document.body.classList.add('fullscreen');
+          } else {
+            document.exitFullscreen();
+            isFullscreen.value = false;
+            document.body.classList.remove('fullscreen');
+          }
+        }
+
+        async function takeScreenshot() {
+          if (!videoEl.value || !stream.value) return;
+
+          const video = videoEl.value;
+          const canvas = canvasEl.value;
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0);
+
+          const dataUrl = canvas.toDataURL('image/png');
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const defaultName = `capmonster-${timestamp}.png`;
+
+          const saved = await window.electronAPI.saveScreenshot(dataUrl, defaultName);
+          if (saved) {
+            showToast('Screenshot saved');
+          }
+        }
+
+        function startRecording() {
+          if (!stream.value) return;
+
+          recordedChunks = [];
+          const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+            ? 'video/webm;codecs=vp9,opus'
+            : 'video/webm';
+
+          mediaRecorder = new MediaRecorder(stream.value, { mimeType });
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordedChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = async () => {
+            const blob = new Blob(recordedChunks, { type: mimeType });
+            const arrayBuffer = await blob.arrayBuffer();
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const defaultName = `capmonster-${timestamp}.webm`;
+
+            const saved = await window.electronAPI.saveRecording(arrayBuffer, defaultName);
+            if (saved) {
+              showToast('Recording saved');
+            }
+            statusText.value = saved ? 'Recording saved' : 'Recording cancelled';
+          };
+
+          mediaRecorder.start(1000);
+          isRecording.value = true;
+          startTime = Date.now();
+          statusText.value = 'Recording...';
+
+          timerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const secs = String(elapsed % 60).padStart(2, '0');
+            recordingTime.value = `${mins}:${secs}`;
+          }, 1000);
+        }
+
+        function stopRecording() {
+          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+          }
+          isRecording.value = false;
+          clearInterval(timerInterval);
+          recordingTime.value = '00:00';
+        }
+
+        function handleKeydown(e) {
+          if (e.key === 'F5') {
+            e.preventDefault();
+            isRecording.value ? stopRecording() : startRecording();
+          } else if (e.key === 'F9') {
+            e.preventDefault();
+            takeScreenshot();
+          } else if (e.key === 'F11') {
+            e.preventDefault();
+            toggleFullscreen();
+          } else if (e.key === 'm' || e.key === 'M') {
+            toggleMute();
+          }
+        }
+
+        function handleFullscreenChange() {
+          if (!document.fullscreenElement) {
+            isFullscreen.value = false;
+            document.body.classList.remove('fullscreen');
+          }
+        }
+
+        onMounted(() => {
+          loadDevices();
+          window.addEventListener('keydown', handleKeydown);
+          document.addEventListener('fullscreenchange', handleFullscreenChange);
+        });
+
+        onUnmounted(() => {
+          if (stream.value) stream.value.getTracks().forEach(t => t.stop());
+          clearInterval(timerInterval);
+          window.removeEventListener('keydown', handleKeydown);
+          document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        });
+
+        return {
+          videoEl, canvasEl, videoDevices, audioDevices,
+          selectedVideoDevice, selectedAudioDevice,
+          stream, isRecording, isFullscreen, isMuted,
+          statusText, recordingTime, toastVisible, toastMessage,
+          startPreview, startRecording, stopRecording,
+          toggleMute, toggleFullscreen, takeScreenshot,
+        };
+      },
+    }).mount('#app');
+  </script>
+</body>
+</html>
